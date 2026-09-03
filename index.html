@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>云宿充 · C端充电小程序 交互原型</title>
+<style>
+:root{--primary:#3567f3;--soft:#edf2ff;--border:#e8edf4;--muted:#8b96a6;--ink:#20293a;--green:#28a06e;--green-soft:#eaf7f0;--orange:#e59a35;--red:#d95455;--bg:#f4f6fa}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:radial-gradient(1200px 700px at 20% -10%,#1d2a4d,#0c1327 60%);display:flex;align-items:center;justify-content:center;gap:36px;padding:24px;font-size:14px}
+/* ===== 桌面侧栏：原型导航 + 后台配置对照 ===== */
+.rail{width:270px;color:#c8d2e6}
+.rail h1{font-size:17px;color:#fff;margin-bottom:4px}
+.rail .sub{font-size:12px;color:#7d8bb0;margin-bottom:16px;line-height:1.7}
+.rail .block{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px 14px;margin-bottom:12px}
+.rail .block b{display:block;font-size:12px;color:#9fb2dd;margin-bottom:8px;letter-spacing:.5px}
+.jump{display:flex;flex-wrap:wrap;gap:6px}
+.jump button{padding:6px 10px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:rgba(255,255,255,.08);color:#dfe7f7;font-size:12px;cursor:pointer}
+.jump button:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+.rail ul{list-style:none;font-size:12px;line-height:2;color:#aab8d8}
+.rail ul b{color:#e6edfb;font-weight:600}
+/* ===== 手机壳 ===== */
+.phone{width:390px;height:780px;border-radius:44px;background:#0b0e15;padding:12px;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.08);flex:none;position:relative}
+.screen{width:100%;height:100%;border-radius:34px;background:var(--bg);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.notch{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:118px;height:26px;border-radius:14px;background:#0b0e15;z-index:60}
+/* ===== 视图路由 ===== */
+.view{position:absolute;inset:0;display:none;flex-direction:column;background:var(--bg)}
+.view.active{display:flex}
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.scroll::-webkit-scrollbar{display:none}
+/* ===== 通用组件 ===== */
+.navbar{position:relative;z-index:5;height:88px;padding:34px 16px 0;display:flex;align-items:center;gap:8px;background:#fff;flex:none}
+.navbar.transparent{background:transparent;position:absolute;left:0;right:0;top:0}
+.navbar .back{width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(20,30,60,.1);font-size:17px;color:#2c3852;cursor:pointer;display:grid;place-items:center}
+.navbar .title{font-size:16px;font-weight:650}
+.navbar .spacer{flex:1}
+.card{background:#fff;border-radius:14px;margin:0 14px 12px;box-shadow:0 2px 10px rgba(25,48,85,.05)}
+.btn{height:42px;padding:0 18px;border:0;border-radius:21px;background:var(--primary);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+.btn.ghost{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+.btn.green{background:var(--green)}
+.btn.big{width:calc(100% - 28px);margin:6px 14px}
+.tag{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:10px;background:#f0f3f8;color:#637085;margin-right:5px}
+.tag.blue{background:#ecf2ff;color:#4267dc}.tag.green{background:#eaf7f0;color:#25885a}.tag.orange{background:#fff4e7;color:#be781d}.tag.red{background:#fff0ef;color:#c94949}
+.status{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6b7789}
+.status:before{content:"";width:6px;height:6px;border-radius:50%;background:#a7b2c2}
+.status.good:before{background:var(--green)}.status.warn:before{background:var(--orange)}.status.bad:before{background:var(--red)}
+/* 底部标签栏 */
+.tabbar{flex:none;display:flex;align-items:stretch;height:74px;background:#fff;border-top:1px solid var(--border);padding-bottom:14px}
+.tabbar button{flex:1;border:0;background:none;font-size:10px;color:#8a95a6;cursor:pointer;position:relative}
+.tabbar button i{display:block;font-style:normal;font-size:20px;margin:7px 0 3px}
+.tabbar button.active{color:var(--primary);font-weight:600}
+.tabbar .scan-btn{flex:none;width:64px;margin-top:-22px}
+.tabbar .scan-btn span{width:52px;height:52px;margin:0 auto;border-radius:50%;background:linear-gradient(145deg,#4c7bff,#2b55e8);display:grid;place-items:center;font-size:24px;color:#fff;box-shadow:0 8px 18px rgba(53,103,243,.4)}
+/* 首页 */
+.home-hero{position:relative;height:330px;background:linear-gradient(160deg,#3963e0 0%,#4d7bf5 55%,#6f97f8 100%);padding:96px 16px 0;color:#fff}
+.home-hero .hi{font-size:20px;font-weight:700}
+.home-hero .hi small{display:block;font-size:12px;font-weight:400;opacity:.85;margin-top:4px}
+.searchbox{margin-top:14px;height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:20px;background:#fff;color:#9aa5b5;font-size:13px;box-shadow:0 6px 16px rgba(20,40,90,.18)}
+.banners{display:flex;gap:10px;overflow-x:auto;margin:14px 0 2px;padding-bottom:4px}
+.banners::-webkit-scrollbar{display:none}
+.banner{flex:none;width:236px;height:88px;border-radius:12px;padding:13px 15px;color:#fff;position:relative;overflow:hidden;cursor:pointer}
+.banner strong{display:block;font-size:14px}
+.banner span{display:block;margin-top:6px;font-size:11px;opacity:.9}
+.banner .go{position:absolute;right:13px;bottom:11px;font-size:10px;background:rgba(255,255,255,.22);padding:3px 8px;border-radius:10px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.quick button{border:0;background:#fff;border-radius:12px;padding:13px 4px 11px;cursor:pointer;box-shadow:0 2px 8px rgba(25,48,85,.06)}
+.quick i{font-style:normal;font-size:22px;display:block}
+.quick span{display:block;margin-top:6px;font-size:11px;color:#4a566b}
+.quick button em{display:block;margin-top:2px;font-style:normal;font-size:10px;color:var(--orange)}
+/* 地图 */
+.map{position:relative;height:210px;border-radius:12px;overflow:hidden;background-color:#eef2ea;cursor:pointer;background-image:linear-gradient(25deg,transparent 46%,#fff 47%,#fff 52%,transparent 53%),linear-gradient(115deg,transparent 45%,#fff 46%,#fff 51%,transparent 52%),linear-gradient(90deg,rgba(150,172,145,.16) 1px,transparent 1px),linear-gradient(rgba(150,172,145,.16) 1px,transparent 1px),linear-gradient(rgba(120,150,200,.1) 1.6px,transparent 1.6px);background-size:130px 130px,150px 150px,34px 34px,34px 34px,220px 90px}
+.pin{position:absolute;width:26px;height:26px;transform:translate(-50%,-100%);border-radius:50% 50% 50% 0;rotate:-45deg;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.25);border:2px solid #fff}
+.pin.fast{background:var(--green)}.pin.slow{background:var(--orange)}.pin.none{background:#b3bcc9}.pin.me{background:var(--primary);border-radius:50%;transform:translate(-50%,-50%);width:14px;height:14px;box-shadow:0 0 0 6px rgba(53,103,243,.2)}
+.pin span{rotate:45deg}
+.map .mapbar{position:absolute;left:10px;right:10px;bottom:10px;height:36px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-radius:10px;background:rgba(255,255,255,.96);font-size:12px;color:#3c4a60;box-shadow:0 4px 12px rgba(20,40,80,.15);cursor:pointer}
+.sec-title{display:flex;align-items:center;justify-content:space-between;margin:16px 16px 10px;font-size:15px;font-weight:650}
+.sec-title a{font-size:12px;color:var(--muted);font-weight:400;cursor:pointer}
+/* 场站卡片 */
+.station{display:flex;gap:12px;padding:14px;border-bottom:1px solid #f0f3f8;cursor:pointer}
+.station:last-child{border-bottom:0}
+.station .ico{flex:none;width:46px;height:46px;border-radius:10px;background:linear-gradient(145deg,#eef4ff,#dfe9ff);display:grid;place-items:center;font-size:22px}
+.station .body{flex:1;min-width:0}
+.station h4{font-size:14px;display:flex;align-items:center;gap:6px}
+.station h4 b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.station .meta{margin-top:5px;font-size:11px;color:#8b96a6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.station .nums{display:flex;gap:10px;margin-top:6px;font-size:11px;color:#5a6779}
+.station .nums b{color:var(--green)}
+.station .nums i{font-style:normal;color:#c2cad6}
+.station .side{flex:none;text-align:right}
+.station .dist{font-size:12px;font-weight:600;color:#3c4a60}
+.station .price{margin-top:6px;font-size:11px;color:#8b96a6}
+.station .price b{color:var(--primary);font-size:14px}
+.station .price small{color:#8b96a6}
+/* 筛选 chips */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 14px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--border);background:#fff;color:#5a6779;font-size:12px;cursor:pointer}
+.chip.on{background:var(--soft);border-color:var(--primary);color:var(--primary);font-weight:600}
+/* 场站详情 */
+.hero{height:190px;background:linear-gradient(140deg,#2c3f6e,#4468c9 70%,#6f97f8);color:#fff;padding:88px 16px 0}
+.hero h2{font-size:19px}
+.hero .addr{margin-top:6px;font-size:12px;opacity:.9}
+.hero .tags{margin-top:8px}
+.hero .tags .tag{background:rgba(255,255,255,.2);color:#fff}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);margin:-34px 14px 12px;background:#fff;border-radius:14px;box-shadow:0 8px 20px rgba(25,48,85,.1);overflow:hidden}
+.statrow>div{padding:14px 6px;text-align:center;border-right:1px solid #f0f3f8}
+.statrow>div:last-child{border-right:0}
+.statrow b{display:block;font-size:20px;color:var(--ink)}
+.statrow span{font-size:11px;color:#8b96a6}
+.statrow .good b{color:var(--green)}
+/* 费率 */
+.rate{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #f3f6fa;font-size:12px}
+.rate:last-child{border-bottom:0}
+.rate .slot{width:64px;font-weight:650;color:#33415c}
+.rate .time{flex:1;color:#77839a}
+.rate .fee{text-align:right;color:#4a566b}
+.rate .fee b{color:var(--primary);font-size:15px}
+.pile{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #f3f6fa}
+.pile:last-child{border-bottom:0}
+.pile .no{flex:none;width:40px;height:40px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:13px}
+.pile .no.free{background:var(--green-soft);color:var(--green)}
+.pile .no.busy{background:#fff0ef;color:var(--red)}
+.pile .no.off{background:#f0f3f8;color:#98a2b3}
+.pile .body{flex:1}
+.pile h5{font-size:13px}
+.pile .meta{font-size:11px;color:#8b96a6;margin-top:3px}
+/* 扫码 */
+.scan-view{background:#0d1117}
+.scan-area{position:relative;height:300px;margin:120px 38px 0;border-radius:20px;overflow:hidden}
+.scan-area:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(53,103,243,.12),transparent 30%,transparent 70%,rgba(53,103,243,.12))}
+.scan-mask{position:absolute;inset:0;background:
+  linear-gradient(#0d1117,#0d1117) top/100% 118px no-repeat,
+  linear-gradient(#0d1117,#0d1117) bottom/100% calc(100% - 218px) no-repeat,
+  linear-gradient(#0d1117,#0d1117) left/38px 100% no-repeat,
+  linear-gradient(#0d1117,#0d1117) right/38px 100% no-repeat}
+.scan-frame{position:absolute;inset:0}
+.scan-frame i{position:absolute;width:26px;height:26px;border:3px solid #5c86ff}
+.scan-frame i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;border-radius:8px 0 0 0}
+.scan-frame i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;border-radius:0 8px 0 0}
+.scan-frame i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 8px}
+.scan-frame i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 8px 0}
+.scan-line{position:absolute;left:6%;right:6%;top:120px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#6ea0ff,#fff,#6ea0ff,transparent);box-shadow:0 0 14px #4d7bff;animation:scan 2.2s ease-in-out infinite}
+@keyframes scan{0%,100%{transform:translateY(0)}50%{transform:translateY(56px)}}
+.scan-tip{color:#c7d2e8;text-align:center;font-size:13px;margin-top:26px;line-height:1.9}
+.scan-tip small{display:block;color:#6c7a97;font-size:11px}
+.scan-actions{display:flex;justify-content:center;gap:26px;margin-top:26px}
+.scan-actions button{width:86px;padding:10px 0;border:0;border-radius:12px;background:rgba(255,255,255,.08);color:#dfe7f7;font-size:11px;cursor:pointer}
+.scan-actions button i{display:block;font-style:normal;font-size:20px;margin-bottom:5px}
+/* 充电中 */
+.charge-top{background:linear-gradient(160deg,#0f5c40,#12855a 60%,#1ba36d);color:#fff;padding:96px 16px 22px;text-align:center;position:relative}
+.charging .charge-top{background:linear-gradient(160deg,#28548f,#3567f3 65%,#5c86ff)}
+.ring{position:relative;width:168px;height:168px;margin:6px auto 10px;border-radius:50%;display:grid;place-items:center}
+.ring .inner{width:138px;height:138px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;text-align:center}
+.ring .inner b{display:block;font-size:34px;font-weight:700}
+.ring .inner span{font-size:11px;opacity:.85}
+.charge-meta{display:grid;grid-template-columns:repeat(3,1fr);margin-top:6px}
+.charge-meta>div{border-right:1px solid rgba(255,255,255,.18)}
+.charge-meta>div:last-child{border-right:0}
+.charge-meta b{display:block;font-size:19px}
+.charge-meta span{font-size:11px;opacity:.8}
+.charge-note{margin:10px 16px 12px;padding:11px 14px;border-radius:11px;background:#fff8ed;color:#97631b;font-size:11px;line-height:1.7}
+/* 弹层 */
+.mask{position:absolute;inset:0;z-index:80;background:rgba(12,20,38,.5);display:none;align-items:flex-end;justify-content:center}
+.mask.show{display:flex}
+.sheet{width:100%;max-height:78%;background:#fff;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + 14px);overflow-y:auto;animation:up .22s ease}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+.sheet h3{font-size:16px;margin-bottom:4px}
+.sheet .sub{font-size:12px;color:#8b96a6;margin-bottom:14px;line-height:1.7}
+.sheet .close{position:absolute;right:16px;top:18px;width:30px;height:30px;border:0;border-radius:50%;background:#f3f5f8;color:#5d697b;font-size:15px;cursor:pointer}
+.sheet{position:relative}
+/* 套餐 */
+.pkg{display:grid;grid-template-columns:repeat(2,1fr);gap:11px;padding:0 16px 4px}
+.pkg button{position:relative;padding:15px 14px;border:1.5px solid var(--border);border-radius:13px;background:#fff;text-align:left;cursor:pointer}
+.pkg button.on{border-color:var(--primary);background:var(--soft);box-shadow:0 4px 14px rgba(53,103,243,.14)}
+.pkg .amt{font-size:21px;font-weight:700;color:var(--ink)}
+.pkg .amt small{font-size:12px;font-weight:400;color:#8b96a6}
+.pkg .gift{margin-top:5px;font-size:11px;color:var(--orange);font-weight:600}
+.pkg .desc{margin-top:4px;font-size:10px;color:#98a2b3}
+.pkg .badge{position:absolute;top:-9px;right:10px;padding:2px 8px;border-radius:9px;background:linear-gradient(120deg,#ff7a45,#ff4d6a);color:#fff;font-size:10px}
+/* 会员 */
+.member-card{margin:14px;padding:20px 18px;border-radius:16px;background:linear-gradient(130deg,#2b2f3d,#3c4257 60%,#575e79);color:#f5e9c8;position:relative;overflow:hidden}
+.member-card:before{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(246,215,130,.35),transparent 70%)}
+.member-card h3{font-size:18px}
+.member-card .sub{margin-top:6px;font-size:11px;opacity:.85}
+.member-card .qr{position:absolute;right:18px;top:20px;width:58px;height:58px;border-radius:9px;background:repeating-conic-gradient(#20242f 0 25%,#f7f0d8 0 50%) 0 0/10px 10px;border:3px solid #f7f0d8}
+.member-card .foot{display:flex;justify-content:space-between;margin-top:18px;font-size:11px;opacity:.9}
+.tier{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid #f3f6fa}
+.tier:last-child{border-bottom:0}
+.tier .medal{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px;color:#fff}
+.tier .body{flex:1}
+.tier h5{font-size:14px}
+.tier p{margin-top:3px;font-size:11px;color:#8b96a6}
+.tier .cur{padding:2px 8px;border-radius:10px;background:var(--soft);color:var(--primary);font-size:10px}
+.rights{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px}
+.rights div{text-align:center;background:#f7f9fd;border-radius:11px;padding:12px 4px}
+.rights i{font-style:normal;font-size:20px}
+.rights span{display:block;margin-top:5px;font-size:10px;color:#5a6779}
+.rights b{display:block;font-size:12px;color:var(--primary)}
+/* 我的 */
+.profile-head{background:linear-gradient(160deg,#3963e0,#5c86ff);color:#fff;padding:96px 18px 20px;display:flex;align-items:center;gap:14px}
+.avatar{width:58px;height:58px;border-radius:50%;background:#fff;color:var(--primary);display:grid;place-items:center;font-size:24px;font-weight:700}
+.profile-head h3{font-size:18px}
+.profile-head p{margin-top:4px;font-size:11px;opacity:.85}
+.wallet-line{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px}
+.wallet-line b{font-size:17px}
+.wallet-line button{margin-left:auto;height:30px;padding:0 14px;border:0;border-radius:15px;background:rgba(255,255,255,.22);color:#fff;font-size:12px;cursor:pointer}
+.cells{background:#fff;border-radius:14px;margin:0 14px 12px;overflow:hidden}
+.cell{display:flex;align-items:center;gap:12px;width:100%;padding:15px 15px;border:0;border-bottom:1px solid #f3f6fa;background:#fff;text-align:left;font-size:14px;cursor:pointer}
+.cell:last-child{border-bottom:0}
+.cell .ic{flex:none;width:34px;height:34px;border-radius:9px;background:#f0f4ff;display:grid;place-items:center;font-size:16px}
+.cell .ar{margin-left:auto;color:#c2cad6}
+.cell .badge-n{margin-left:auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:10px;display:grid;place-items:center}
+.cell .ar+.badge-n{margin-left:0;margin-right:2px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px}
+.grid4 button{border:0;background:#f7f9fd;border-radius:11px;padding:11px 4px;cursor:pointer;position:relative}
+.grid4 i{font-style:normal;font-size:19px;display:block}
+.grid4 span{display:block;margin-top:5px;font-size:10px;color:#4a566b}
+.grid4 em{position:absolute;top:5px;right:9px;font-style:normal;min-width:15px;height:15px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;display:grid;place-items:center}
+/* 活动详情 */
+.act-detail-img{height:150px;border-radius:14px;margin:14px;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700;letter-spacing:1px}
+.rule{padding:12px 14px;font-size:12px;color:#5a6779;line-height:2;background:#f8fafd;border-radius:10px;margin:0 14px 14px}
+.rule b{display:block;color:#33415c;margin-bottom:4px}
+/* 提示 */
+.toast{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);z-index:120;padding:11px 18px;border-radius:10px;background:rgba(20,30,50,.88);color:#fff;font-size:13px;white-space:nowrap;display:none}
+.toast.show{display:block;animation:up .2s ease}
+.center-col{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.empty{padding:60px 0;color:#9aa5b5;font-size:13px;text-align:center}
+.empty i{font-style:normal;font-size:38px;display:block;margin-bottom:10px}
+@media(max-width:820px){body{padding:0}.rail{display:none}.phone{width:100vw;height:100vh;border-radius:0;padding:0}.screen{border-radius:0}.notch{display:none}}
+</style>
+</head>
+<body>
+
+<!-- 桌面端侧栏：页面直达 + 与现有后台配置模块的对应关系 -->
+<aside class="rail">
+  <h1>云宿充 · C端充电小程序</h1>
+  <div class="sub">扫码充电 · 地图场站 · 活动营销 · 充值钱包 · 会员体系<br>交互原型 v1.0 —— 数据均模拟「运营管理后台」下发</div>
+  <div class="block"><b>原型页面直达</b>
+    <div class="jump" id="jumpBox"></div>
+  </div>
+  <div class="block"><b>后台配置 → 小程序展示 对应关系</b>
+    <ul>
+      <li><b>场站管理</b>：地图图钉、场站列表、详情、枪状态</li>
+      <li><b>收费配置</b>：分时电价（尖峰平谷）+ 服务费</li>
+      <li><b>充值套餐</b>：钱包页套餐档位与赠送金额</li>
+      <li><b>活动管理</b>：首页 Banner、活动中心、场站标签</li>
+      <li><b>会员等级</b>：会员卡、折扣权益、成长值</li>
+      <li><b>卡券营销</b>：优惠券领取、下单抵扣</li>
+    </ul>
+  </div>
+  <div class="block"><b>体验提示</b>
+    <ul style="line-height:1.9">
+      <li>点击底部 <b>扫码</b> 或地图图钉 / 场站卡片开始完整充电流程</li>
+      <li>充电页实时累加电量与金额（含分时电价切换）</li>
+      <li>钱包页选择套餐后确认支付，余额实时更新</li>
+    </ul>
+  </div>
+</aside>
+
+<div class="phone"><div class="notch"></div>
+<div class="screen" id="screen">
+
+  <!-- ================= 首页（地图） ================= -->
+  <section class="view active" id="v-home">
+    <div class="scroll">
+      <div class="home-hero">
+        <div class="hi" id="greet">你好，车主
+          <small id="greetSub">已充电 12 次 · 累计 86.4 度</small>
+        </div>
+        <div class="searchbox" onclick="go('stations')">⌕ 搜索场站 / 小区 / 目的地</div>
+        <div class="banners" id="bannerBox"></div>
+        <div class="quick" id="quickBox"></div>
+      </div>
+      <div class="sec-title">附近场站 <a onclick="go('stations')">全部 ›</a></div>
+      <div class="card">
+        <div class="map" id="homeMap" style="margin:12px;border-radius:10px">
+          <span class="pin me" style="left:46%;top:52%"></span>
+        </div>
+      </div>
+      <div class="sec-title" style="margin-bottom:2px">推荐场站 <a onclick="go('stations')">查看全部 ›</a></div>
+      <div class="card" id="homeStations" style="margin-bottom:20px"></div>
+    </div>
+    <nav class="tabbar" data-tab="home"></nav>
+  </section>
+
+  <!-- ================= 场站列表 ================= -->
+  <section class="view" id="v-stations">
+    <div class="navbar"><button class="back" onclick="go('home')">‹</button><span class="title">充电场站</span><span class="spacer"></span><span style="font-size:12px;color:#8b96a6" onclick="go('home')">地图模式</span></div>
+    <div class="chips" id="filterChips"></div>
+    <div class="scroll">
+      <div class="card" id="stationList" style="margin-top:2px"></div>
+      <div class="empty" style="padding:26px 0 30px">— 已显示全部场站 —</div>
+    </div>
+    <nav class="tabbar" data-tab="stations"></nav>
+  </section>
+
+  <!-- ================= 场站详情 ================= -->
+  <section class="view" id="v-station">
+    <div class="scroll">
+      <div class="hero">
+        <h2 id="sdName">—</h2>
+        <div class="addr" id="sdAddr">—</div>
+        <div class="tags" id="sdTags"></div>
+      </div>
+      <div class="navbar transparent"><button class="back" onclick="backTo()">‹</button><span class="spacer"></span><button class="back" onclick="toast('已收藏')">♡</button></div>
+      <div class="statrow" id="sdStat"></div>
+      <div class="card">
+        <div class="cell" onclick="toast('已调起地图导航')"><span class="ic">🧭</span>导航到这里<span class="badge-n" id="sdDist" style="background:var(--soft);color:var(--primary)">—</span><span class="ar">›</span></div>
+        <div class="cell" onclick="toast('客服电话：400-000-0000')"><span class="ic">📞</span>场站客服<span class="ar">›</span></div>
+      </div>
+      <div class="sec-title">⚡ 充电价格 <span style="font-weight:400;font-size:11px;color:#8b96a6">（后台「收费配置」下发）</span></div>
+      <div class="card" id="sdRates"></div>
+      <div class="sec-title">充电设备 <span id="sdPileSummary" style="font-weight:400;font-size:12px;color:#8b96a6"></span></div>
+      <div class="card" id="sdPiles" style="margin-bottom:12px"></div>
+      <div class="sec-title">场站活动 <a onclick="go('activity')">活动中心 ›</a></div>
+      <div class="card" id="sdActs" style="margin-bottom:24px"></div>
+    </div>
+    <div style="flex:none;background:#fff;border-top:1px solid var(--border);padding:10px 14px calc(10px + 14px);display:flex;gap:10px;align-items:center">
+      <div style="flex:1;font-size:11px;color:#8b96a6">扫码或点击空闲枪位开始充电</div>
+      <button class="btn" style="width:150px" onclick="go('scan')">立即充电</button>
+    </div>
+  </section>
+
+  <!-- ================= 扫码 ================= -->
+  <section class="view scan-view" id="v-scan">
+    <div class="navbar transparent" style="z-index:20"><button class="back" onclick="go('home')">‹</button><span class="title" style="color:#fff">扫一扫</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center">
+      <div class="scan-area">
+        <div class="scan-mask"></div>
+        <div class="scan-frame"><i></i><i></i><i></i><i></i></div>
+        <div class="scan-line"></div>
+      </div>
+      <div class="scan-tip">对准充电桩上的二维码即可开始充电<small>支持扫桩码 / 输入桩号 / 蓝牙连接</small></div>
+      <div class="scan-actions">
+        <button onclick="toast('调起相册识别二维码')"><i>🖼</i>相册</button>
+        <button onclick="askCode()"><i>⌨</i>输入桩号</button>
+        <button onclick="toast('正在搜索附近蓝牙桩…')"><i>📶</i>蓝牙</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 充电中 ================= -->
+  <section class="view" id="v-charging">
+    <div class="scroll">
+      <div class="charge-top" id="chargeTop">
+        <div style="font-size:13px;opacity:.9" id="chgStation">—</div>
+        <div class="ring" id="chgRing">
+          <div class="inner"><b id="chgSoc">0<small style="font-size:15px">%</small></b><span id="chgStatus">正在连接充电桩…</span></div>
+        </div>
+        <div class="charge-meta">
+          <div><b id="chgKwh">0.00</b><span>电量（度）</span></div>
+          <div><b id="chgPower">--</b><span>功率（kW）</span></div>
+          <div><b id="chgMin">0</b><span>时长（分钟）</span></div>
+        </div>
+      </div>
+      <div class="charge-note" id="chgNote">💡 充电过程中请勿拔枪；电量达到 85% 后将自动降流保护电池。</div>
+      <div class="card" style="padding:4px 0">
+        <div class="rate"><span class="slot" style="width:auto">当前时段</span><span class="time" id="chgPeriod">—</span></div>
+        <div class="rate"><span class="slot" style="width:auto">计费预估</span><span class="time" style="flex:none"><b style="font-size:20px;color:var(--primary)" id="chgCost">¥0.00</b> <span style="font-size:11px;color:#8b96a6">（电费+服务费）</span></span></div>
+        <div class="rate"><span class="slot" style="width:auto">余额支付</span><span class="time" id="chgBalance">—</span></div>
+      </div>
+      <button class="btn big ghost" style="color:var(--red);border-color:var(--red);margin-top:10px" onclick="stopCharge()">结束充电</button>
+      <button class="btn big ghost" onclick="toast('充电已预约暂停，可在后台策略中配置')">暂停充电</button>
+      <div style="height:24px"></div>
+    </div>
+  </section>
+
+  <!-- ================= 订单列表 ================= -->
+  <section class="view" id="v-orders">
+    <div class="navbar"><button class="back" onclick="go('profile')">‹</button><span class="title">充电订单</span></div>
+    <div class="chips"><span class="chip on">全部</span><span class="chip" onclick="toast('切换：进行中')">进行中</span><span class="chip" onclick="toast('切换：已完成')">已完成</span><span class="chip" onclick="toast('切换：待支付')">待支付</span><span class="chip" onclick="toast('切换：已退款')">退款/故障</span></div>
+    <div class="scroll"><div class="card" id="orderList"></div><div style="height:20px"></div></div>
+  </section>
+
+  <!-- ================= 活动中心 ================= -->
+  <section class="view" id="v-activity">
+    <div class="navbar"><button class="back" onclick="go('home')">‹</button><span class="title">活动中心</span><span class="spacer"></span><span style="font-size:12px;color:#8b96a6" onclick="toast('已开启活动提醒')">🔔 提醒</span></div>
+    <div class="scroll" id="actList" style="padding-bottom:20px"></div>
+    <nav class="tabbar" data-tab="activity"></nav>
+  </section>
+
+  <!-- ================= 钱包 / 充值 ================= -->
+  <section class="view" id="v-wallet">
+    <div class="navbar"><button class="back" onclick="backTo()">‹</button><span class="title">余额 · 充值</span><span class="spacer"></span><span style="font-size:12px;color:#8b96a6" onclick="toast('账单明细已生成')">明细</span></div>
+    <div class="scroll">
+      <div class="profile-head" style="padding:20px 18px 22px;background:linear-gradient(160deg,#2b3f8f,#3567f3 70%,#5c86ff)">
+        <div style="flex:1">
+          <div style="font-size:12px;opacity:.85">账户余额（元）</div>
+          <div style="font-size:32px;font-weight:700;margin-top:4px" id="walletAmount">¥ 128.60</div>
+          <div class="wallet-line" style="margin-top:10px"><span>🎁 卡券 <b id="walletCoupons">3</b> 张</span><span style="opacity:.7">|</span><span>会员折扣 <b id="walletDisc">—</b></span></div>
+        </div>
+      </div>
+      <div class="sec-title">选择充值套餐 <span style="font-weight:400;font-size:11px;color:#8b96a6">（后台「充值套餐」配置）</span></div>
+      <div class="pkg" id="pkgBox"></div>
+      <div class="card" style="margin-top:14px;padding:4px 0">
+        <label class="cell" style="cursor:pointer"><span class="ic">💚</span>微信支付<span style="margin-left:auto;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--primary);display:grid;place-items:center"><i style="width:9px;height:9px;border-radius:50%;background:var(--primary)"></i></span></label>
+        <label class="cell" style="cursor:pointer" onclick="event.preventDefault();toast('组合支付：余额+微信')"><span class="ic">🧾</span>组合支付（余额优先）<span class="ar">›</span></label>
+      </div>
+      <button class="btn big" onclick="payPkg()">立即充值</button>
+      <div class="rule" style="margin-top:6px"><b>充值说明</b>赠送金额可用于支付电费与服务费，不可提现；发票按实付金额开具。套餐由运营后台配置，活动期间赠送比例以上方展示为准。</div>
+      <div style="height:20px"></div>
+    </div>
+  </section>
+
+  <!-- ================= 会员 ================= -->
+  <section class="view" id="v-member">
+    <div class="navbar"><button class="back" onclick="backTo()">‹</button><span class="title">会员中心</span></div>
+    <div class="scroll">
+      <div class="member-card" id="memberCard">
+        <div class="qr" onclick="toast('会员码已展示，商家扫码核销')"></div>
+        <h3 id="mcTier">⚡ 黄金会员</h3>
+        <div class="sub" id="mcNo">NO.8826 1**9 · 云宿充会员</div>
+        <div class="foot"><span>成长值 <b id="mcGrow">1260</b></span><span id="mcNext">距白金会员还差 740</span></div>
+      </div>
+      <div class="sec-title" style="margin-bottom:2px">我的权益 <span style="font-weight:400;font-size:11px;color:#8b96a6">（后台「会员等级」配置）</span></div>
+      <div class="card"><div class="rights" id="rightsBox"></div></div>
+      <div class="sec-title" style="margin-bottom:2px">等级体系</div>
+      <div class="card" id="tierBox" style="margin-bottom:24px"></div>
+    </div>
+  </section>
+
+  <!-- ================= 我的 ================= -->
+  <section class="view" id="v-profile">
+    <div class="scroll">
+      <div class="profile-head">
+        <div class="avatar">电</div>
+        <div style="flex:1"><h3>车主 138****6688</h3><p id="pfTier">⚡ 黄金会员 · 成长值 1260</p>
+          <div class="wallet-line"><span>余额 <b id="pfBalance">¥128.60</b></span><button onclick="go('wallet')">充值</button></div>
+        </div>
+      </div>
+      <div class="card"><div class="grid4">
+        <button onclick="go('wallet')"><i>💰</i><span>余额充值</span></button>
+        <button onclick="go('coupons')"><i>🎟</i><span>卡券</span><em>3</em></button>
+        <button onclick="go('orders')"><i>🧾</i><span>订单</span></button>
+        <button onclick="toast('车辆管理：E-V牌 001（后台上传车辆档案）')"><i>🚗</i><span>车辆</span></button>
+      </div></div>
+      <div class="cells">
+        <button class="cell" onclick="go('orders')"><span class="ic">⚡</span>充电订单<span class="badge-n">1</span><span class="ar">›</span></button>
+        <button class="cell" onclick="go('member')"><span class="ic">👑</span>会员中心<span class="ar">›</span></button>
+        <button class="cell" onclick="toast('申请发票：按实付金额开具电子普票')"><span class="ic">📄</span>发票管理<span class="ar">›</span></button>
+        <button class="cell" onclick="toast('常用站点：默认显示您附近的场站')"><span class="ic">⭐</span>常用场站<span class="ar">›</span></button>
+        <button class="cell" onclick="toast('在线客服工作时间 9:00-21:00')"><span class="ic">💬</span>联系客服<span class="ar">›</span></button>
+        <button class="cell" onclick="toast('设置：消息通知 / 隐私 / 清除缓存')"><span class="ic">⚙️</span>设置<span class="ar">›</span></button>
+      </div>
+      <div class="empty" style="padding:18px 0 26px">云宿充充电 · 让补能更省心</div>
+    </div>
+    <nav class="tabbar" data-tab="profile"></nav>
+  </section>
+
+  <!-- ================= 卡券 ================= -->
+  <section class="view" id="v-coupons">
+    <div class="navbar"><button class="back" onclick="backTo()">‹</button><span class="title">我的卡券</span><span class="spacer"></span><span style="font-size:12px;color:var(--primary)" onclick="toast('券码兑换成功')">兑换</span></div>
+    <div class="chips"><span class="chip on">可使用 3</span><span class="chip" onclick="toast('切换：已使用')">已使用</span><span class="chip" onclick="toast('切换：已过期')">已过期</span></div>
+    <div class="scroll"><div class="card" id="couponList"></div><div style="height:20px"></div></div>
+  </section>
+
+  <!-- ================= 弹层 / 提示 ================= -->
+  <div class="mask" id="mask"><div class="sheet" id="sheet"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+</div>
+
+<script>
+/* =====================================================
+ * SERVER_CONFIG —— 模拟「运营管理后台」下发的配置数据
+ * 实际上线时由以下后台模块通过接口提供：
+ *   场站管理 / 收费配置(分时电价+服务费) / 充值套餐
+ *   活动管理(Banner+活动) / 会员等级 / 卡券营销
+ * 前端一律按配置渲染，不在端上写死任何业务数值。
+ * ===================================================== */
+const SERVER_CONFIG = {
+  banners: [
+    { id:"b1", title:"新用户下单立减 10 元", desc:"首次扫码充电即享", grad:"linear-gradient(130deg,#ff7a45,#ff4d6a)", act:"a1" },
+    { id:"b2", title:"充值满 300 送 60", desc:"限时活动 · 9月30日截止", grad:"linear-gradient(130deg,#3567f3,#7a5cff)", act:"a2" },
+    { id:"b3", title:"邀好友 充电双方各得 15 元", desc:"上不封顶，立即邀请", grad:"linear-gradient(130deg,#12a06b,#43c98a)", act:"a3" },
+  ],
+  quick: [
+    { icon:"📷", name:"扫码充电", run:()=>go('scan') },
+    { icon:"💰", name:"余额充值", em:"满300送60", run:()=>go('wallet') },
+    { icon:"👑", name:"会员中心", run:()=>go('member') },
+    { icon:"🎟", name:"领卡券", em:"3张可用", run:()=>go('coupons') },
+  ],
+  /* 场站：后台「场站管理」配置（位置/设备/标签），「收费配置」下发分时费率 */
+  stations: [
+    { id:"s1", icon:"🏢", name:"云宿充·滨江天悦广场站", addr:"滨江区江虹路 601 号 B2 停车场", dist:"0.4km", fast:12, slow:8, freeFast:4, freeSlow:3, tags:["24h营业","免停车费2h","超充"], map:{x:63,y:26},
+      price:[ {slot:"尖峰", time:"19:00-21:00", elec:1.72, fee:0.45}, {slot:"高峰", time:"08:00-11:00 / 13:00-19:00", elec:1.31, fee:0.45}, {slot:"平段", time:"11:00-13:00 / 21:00-23:00", elec:0.92, fee:0.40}, {slot:"低谷", time:"23:00-次日08:00", elec:0.42, fee:0.30} ],
+      acts:["a1","a4"] },
+    { id:"s2", icon:"🛒", name:"云宿充·星光大道购物中心站", addr:"滨江区泰安路 200 号地面停车场", dist:"1.2km", fast:16, slow:0, freeFast:6, freeSlow:0, tags:["会员8.8折","充电5h免停"], map:{x:24,y:62},
+      price:[ {slot:"高峰", time:"08:00-19:00", elec:1.28, fee:0.42}, {slot:"平段", time:"19:00-23:00", elec:0.95, fee:0.40}, {slot:"低谷", time:"23:00-次日08:00", elec:0.45, fee:0.30} ],
+      acts:["a2","a5"] },
+    { id:"s3", icon:"🏘", name:"云宿充·闻涛社区驿站", addr:"滨江区闻涛路 88 号社区东侧", dist:"1.8km", fast:4, slow:20, freeFast:1, freeSlow:11, tags:["慢充优惠","夜间半价"], map:{x:78,y:70},
+      price:[ {slot:"平段", time:"07:00-23:00", elec:0.88, fee:0.35}, {slot:"低谷", time:"23:00-次日07:00", elec:0.38, fee:0.25} ],
+      acts:["a3"] },
+    { id:"s4", icon:"🛣", name:"云宿充·江南大道超充站", addr:"江南大道 1588 号（高速口旁）", dist:"2.6km", fast:24, slow:0, freeFast:2, freeSlow:0, tags:["480kW超充","即插即充"], map:{x:44,y:14},
+      price:[ {slot:"高峰", time:"08:00-20:00", elec:1.45, fee:0.50}, {slot:"低谷", time:"20:00-次日08:00", elec:0.55, fee:0.35} ],
+      acts:["a4"] },
+  ],
+  /* 充值套餐：后台「充值套餐」配置 */
+  packages: [
+    { id:"p50",  amount:50,  give:5,   badge:"", desc:"到账 ¥55" },
+    { id:"p100", amount:100, give:15,  badge:"热销", desc:"到账 ¥115" },
+    { id:"p300", amount:300, give:60,  badge:"限时+6%", desc:"到账 ¥360" },
+    { id:"p500", amount:500, give:100, badge:"", desc:"到账 ¥600 · 送充电年卡" },
+  ],
+  /* 活动：后台「活动管理」配置 */
+  activities: [
+    { id:"a1", title:"新用户充电立减 10 元", sub:"首次扫码充电即减，限功率≥60kW场站", grad:"linear-gradient(130deg,#ff7a45,#ff4d6a)", emoji:"🎉", rule:["活动期间，首次在小程序完成扫码充电的新用户自动立减10元；","立减金额在订单结算页展示，可与会员折扣叠加；","每个用户限参与1次，退款后资格不返还。"] },
+    { id:"a2", title:"充值满 300 送 60", sub:"活动期至 9月30日，赠送金额实时到账", grad:"linear-gradient(130deg,#3567f3,#7a5cff)", emoji:"💰", rule:["活动期间单笔充值满300元，额外赠送60元到账；","赠送金额可用于支付电费/服务费，不可提现；","发票按实付金额开具。"] },
+    { id:"a3", title:"邀请好友 各得 15 元", sub:"好友完成首单后双方各得15元余额", grad:"linear-gradient(130deg,#12a06b,#43c98a)", emoji:"🤝", rule:["分享专属邀请页，好友注册并完成首单充电；","双方各得15元充值余额，次日凌晨到账；","每人每月最多奖励10人。"] },
+    { id:"a4", title:"超充时段服务费 5 折", sub:"江南大道超充站 11:00-13:00", grad:"linear-gradient(130deg,#f7a01e,#ffb85c)", emoji:"⚡", rule:["活动场站：江南大道超充站；","每日11:00-13:00 服务费按5折计费；","结算页自动计算，无需领券。"] },
+    { id:"a5", title:"会员日：充电金翻倍", sub:"每周三会员日，充值赠送金额翻倍", grad:"linear-gradient(130deg,#5b3df5,#9a6bff)", emoji:"🎁", rule:["每周三充值各档位赠送金额×2；","与其他充值活动不叠加；","会员日特权以「会员等级」后台配置为准。"] },
+  ],
+  /* 会员等级：后台「会员等级」配置 */
+  tiers: [
+    { name:"普通会员", icon:"🔵", color:"#8fa3c4", grow:0, rights:{ disc:"无折扣", coupon:"新人券包", day:"—" } },
+    { name:"黄金会员", icon:"⚡", color:"#c9a23f", grow:800, rights:{ disc:"充电 9.5 折", coupon:"每月2张5元券", day:"积分×1.5" } },
+    { name:"白金会员", icon:"💎", color:"#6f8dff", grow:2000, rights:{ disc:"充电 9 折", coupon:"每月4张5元券", day:"积分×2" } },
+    { name:"钻石会员", icon:"👑", color:"#1f2c4d", grow:5000, rights:{ disc:"充电 8.5 折", coupon:"每月8元券×6", day:"积分×3" } },
+  ],
+  /* 卡券：后台「卡券营销」配置 */
+  coupons: [
+    { id:"c1", name:"新用户立减券", amount:10, cond:"满 20 元可用", exp:"2026-09-30", tag:"立减" },
+    { id:"c2", name:"服务费抵扣券", amount:5,  cond:"充电订单通用", exp:"2026-09-15", tag:"抵扣" },
+    { id:"c3", name:"慢充专享券", amount:8,  cond:"限社区慢充场站", exp:"2026-09-20", tag:"专享" },
+  ],
+  member:{ tierIndex:1, grow:1260 },
+  wallet:{ balance:128.60 },
+};
+
+/* ================= 运行时状态 ================= */
+const state = {
+  selPkg: SERVER_CONFIG.packages[1],
+  curStation: null,
+  charging: null,   // {kwh, soc, min, station, pile, timer}
+  fromScreen: 'home',
+};
+const $ = s => document.querySelector(s);
+const money = n => '¥' + n.toFixed(2);
+
+/* ================= 路由 ================= */
+const TABS = { home:'home', stations:'stations', activity:'activity', profile:'profile' };
+function go(id, opt){
+  if(id === 'station' && !state.curStation) id = 'stations';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const view = $('#v-' + id); if(!view) return;
+  view.classList.add('active');
+  view.querySelector('.scroll')?.scrollTo(0,0);
+  if(opt && opt.from) state.fromScreen = opt.from;
+}
+function backTo(){ go(state.fromScreen || 'home'); }
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 1800);
+}
+/* 底部标签栏 */
+function buildTabbar(){
+  document.querySelectorAll('.tabbar').forEach(bar=>{
+    const cur = bar.dataset.tab;
+    bar.innerHTML = `
+      <button class="${cur==='home'?'active':''}" onclick="go('home')"><i>🗺</i>首页</button>
+      <button class="${cur==='stations'?'active':''}" onclick="go('stations')"><i>⚡</i>场站</button>
+      <button class="scan-btn" onclick="go('scan')"><span>📷</span></button>
+      <button class="${cur==='activity'?'active':''}" onclick="go('activity')"><i>🎁</i>活动</button>
+      <button class="${cur==='profile'?'active':''}" onclick="go('profile')"><i>👤</i>我的</button>`;
+  });
+}
+/* 桌面侧栏直达按钮 */
+function buildJump(){
+  const pages = [ ['首页·地图','home'], ['场站列表','stations'], ['场站详情','station'], ['扫码充电','scan'], ['充电中','charging'], ['订单','orders'], ['活动中心','activity'], ['余额充值','wallet'], ['会员中心','member'], ['我的','profile'], ['卡券','coupons'] ];
+  $('#jumpBox').innerHTML = pages.map(([n,id])=>`<button onclick="${['scan','charging'].includes(id)?'':'state.curStation=state.curStation||SERVER_CONFIG.stations[0];'}${['station','charging','orders','coupons'].includes(id)?"prep:"+id:"go('"+id+"')"}">${n}</button>`).join('');
+  // 简化：详情类页面先准备数据
+  $('#jumpBox').querySelectorAll('button').forEach((btn,i)=>{
+    const id = pages[i][1];
+    btn.onclick = ()=>{
+      if(id==='station'||id==='charging'){ if(!state.curStation) state.curStation = SERVER_CONFIG.stations[0]; renderStationDetail(state.curStation); }
+      if(id==='charging' && !state.charging){ startCharge(state.curStation, 'Fast-0'+(1+Math.floor(Math.random()*4))); return; }
+      if(id==='orders') renderOrders();
+      if(id==='coupons') renderCoupons();
+      go(id);
+    };
+  });
+}
+
+/* ================= 首页 ================= */
+function renderHome(){
+  const st = SERVER_CONFIG.stations;
+  $('#bannerBox').innerHTML = SERVER_CONFIG.banners.map(b=>`
+    <div class="banner" style="background:${b.grad}" onclick="openActivity('${b.act}')">
+      <strong>${b.title}</strong><span>${b.desc}</span><span class="go">立即查看 ›</span>
+    </div>`).join('');
+  $('#quickBox').innerHTML = SERVER_CONFIG.quick.map(q=>`
+    <button onclick="(${q.run.toString()})()"><i>${q.icon}</i><span>${q.name}</span>${q.em?`<em>${q.em}</em>`:''}</button>`).join('');
+  // 地图：后台场站坐标映射到地图
+  const map = $('#homeMap');
+  st.forEach(s=>{
+    const p = document.createElement('span');
+    p.className = 'pin ' + (s.freeFast? 'fast' : s.freeSlow? 'slow' : 'none');
+    p.style.left = s.map.x+'%'; p.style.top = s.map.y+'%';
+    p.innerHTML = `<span>${s.freeFast+s.freeSlow}</span>`;
+    p.title = s.name;
+    p.onclick = e => { e.stopPropagation(); openStation(s.id); };
+    map.appendChild(p);
+  });
+  $('.mapbar');
+  $('#homeStations').innerHTML = st.slice(0,3).map(stationCard).join('');
+}
+function stationCard(s){
+  return `<div class="station" onclick="openStation('${s.id}')">
+    <div class="ico">${s.icon}</div>
+    <div class="body">
+      <h4><b>${s.name}</b>${s.tags[0]?`<span class="tag green">${s.tags[0]}</span>`:''}</h4>
+      <div class="meta">${s.addr}</div>
+      <div class="nums">快充 <b>${s.freeFast}</b>/${s.fast} <i>|</i> 慢充 <b>${s.freeSlow}</b>/${s.slow} <i>|</i> ${s.acts.length?'<span class="tag orange">'+SERVER_CONFIG.activities.find(a=>a.id===s.acts[0]).title.slice(0,9)+'…</span>':''}</div>
+    </div>
+    <div class="side">
+      <div class="dist">${s.dist}</div>
+      <div class="price"><b>${Math.min(...s.price.map(p=>p.elec)).toFixed(2)}</b><small>~${Math.max(...s.price.map(p=>p.elec)).toFixed(2)}元/度</small></div>
+    </div>
+  </div>`;
+}
+/* 地图底栏 */
+document.addEventListener('DOMContentLoaded', ()=>{}); // noop
+
+/* ================= 场站列表 ================= */
+let filter = 'all';
+function renderFilters(){
+  const defs = [ ['all','全部'],['fast','快充空闲'],['slow','慢充空闲'],['cheap','低价优先'],['near','距离优先'] ];
+  $('#filterChips').innerHTML = defs.map(([k,n])=>`<span class="chip ${filter===k?'on':''}" onclick="setFilter('${k}')">${n}</span>`).join('');
+}
+function setFilter(k){ filter=k; renderFilters(); renderStations(); if(k!=='all') toast('已按「'+{fast:'快充空闲',slow:'慢充空闲',cheap:'低价优先',near:'距离优先'}[k]+'」筛选'); }
+function renderStations(){
+  let list = [...SERVER_CONFIG.stations];
+  if(filter==='fast') list = list.filter(s=>s.freeFast>0);
+  if(filter==='slow') list = list.filter(s=>s.freeSlow>0);
+  if(filter==='cheap') list.sort((a,b)=>Math.min(...a.price.map(p=>p.elec))-Math.min(...b.price.map(p=>p.elec)));
+  if(filter==='near') list.sort((a,b)=>parseFloat(a.dist)-parseFloat(b.dist));
+  $('#stationList').innerHTML = list.map(stationCard).join('');
+}
+
+/* ================= 场站详情 ================= */
+function openStation(id){
+  const s = SERVER_CONFIG.stations.find(x=>x.id===id); if(!s) return;
+  state.curStation = s; state.fromScreen = 'home';
+  renderStationDetail(s); go('station');
+}
+function renderStationDetail(s){
+  $('#sdName').textContent = s.name;
+  $('#sdAddr').textContent = '📍 ' + s.addr;
+  $('#sdTags').innerHTML = s.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  const total = s.fast+s.slow, free = s.freeFast+s.freeSlow;
+  $('#sdStat').innerHTML = `
+    <div class="good"><b>${free}</b><span>空闲终端</span></div>
+    <div><b>${total}</b><span>终端总数</span></div>
+    <div><b>${Math.min(...s.price.map(p=>p.elec+p.fee)).toFixed(2)}</b><span>起（元/度）</span></div>`;
+  $('#sdDist').textContent = s.dist;
+  $('#sdRates').innerHTML = s.price.map(p=>`
+    <div class="rate"><span class="slot">${p.slot}</span><span class="time">${p.time}</span>
+      <span class="fee">电费 <b>${p.elec.toFixed(2)}</b> + 服务费 ${p.fee.toFixed(2)}</span></div>`).join('');
+  const piles = [];
+  for(let i=1;i<=Math.min(s.fast,6);i++) piles.push({ no:'F-'+String(i).padStart(2,'0'), type:'直流快充', power:120, free: i<=s.freeFast });
+  for(let i=1;i<=Math.min(s.slow,4);i++) piles.push({ no:'S-'+String(i).padStart(2,'0'), type:'交流慢充', power:7, free: i<=s.freeSlow });
+  $('#sdPileSummary').textContent = `快充 ${s.freeFast}/${s.fast} 空闲 · 慢充 ${s.freeSlow}/${s.slow} 空闲`;
+  $('#sdPiles').innerHTML = piles.map(p=>`
+    <div class="pile">
+      <div class="no ${p.free?'free':'busy'}">${p.no}</div>
+      <div class="body"><h5>${p.type} ${p.power}kW</h5><div class="meta">${p.free?'可插枪 · 即插即充已开启':'充电中 · 预计 '+((Math.random()*40|0)+15)+'分钟后空闲'}</div></div>
+      <button class="btn ${p.free?'green':'ghost'}" style="height:34px;font-size:12px;padding:0 14px" ${p.free?'':'disabled'} onclick="${p.free?`startCharge(state.curStation,'${p.no}')`:`toast('该枪正在充电中')`}">${p.free?'开始充电':'使用中'}</button>
+    </div>`).join('');
+  $('#sdActs').innerHTML = s.acts.length ? s.acts.map(id=>{
+    const a = SERVER_CONFIG.activities.find(x=>x.id===id);
+    return `<div class="station" onclick="openActivity('${a.id}')"><div class="ico">${a.emoji}</div>
+      <div class="body"><h4><b>${a.title}</b></h4><div class="meta">${a.sub}</div></div><div class="side"><span class="ar" style="color:#c2cad6">›</span></div></div>`;
+  }).join('') : '<div class="empty">该场站暂无活动</div>';
+}
+
+/* ================= 扫码 → 选枪确认 ================= */
+let scanTimer = null;
+function enterScan(){
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(()=>{ // 模拟识别到二维码
+    if(!$('#v-scan').classList.contains('active')) return;
+    openStation(SERVER_CONFIG.stations[0].id);
+    askCode();
+  }, 2600);
+}
+function askCode(){
+  showSheet(`
+    <h3>输入 / 确认充电桩编号</h3>
+    <div class="sub">扫码识别成功：${state.curStation? state.curStation.name : '云宿充·滨江天悦广场站'} · 直流快充 F-01</div>
+    <div style="display:flex;gap:10px;margin-bottom:6px">
+      <input class="input" value="${state.curStation? state.curStation.id.toUpperCase():'S1'}" style="flex:1;height:44px;border:1px solid #dfe5ee;border-radius:10px;padding:0 12px;font-size:15px;text-align:center" id="codeInput">
+      <button class="btn" style="height:44px;padding:0 20px" onclick="confirmGun()">连接</button>
+    </div>
+    <div class="rule" style="margin:10px 0 2px"><b>安全提示</b>请确认枪头与车辆充电口连接到位后再开始充电。</div>`);
+}
+function confirmGun(){
+  const s = state.curStation || SERVER_CONFIG.stations[0];
+  startCharge(s, 'F-01');
+}
+/* ================= 充电流程 ================= */
+function startCharge(station, pile){
+  hideSheet();
+  const s = station || SERVER_CONFIG.stations[0];
+  state.curStation = s;
+  state.charging = { kwh:0, soc:18, min:0, station:s, pile:pile||'F-01', paid:false };
+  $('#chgStation').textContent = s.name + ' · ' + (pile||'F-01') + ' 枪';
+  $('#chgStatus').textContent = '正在连接充电桩…';
+  $('#chgSoc').innerHTML = '0<small style="font-size:15px">%</small>';
+  $('#chgKwh').textContent = '0.00'; $('#chgPower').textContent='--'; $('#chgMin').textContent='0';
+  document.body.classList.remove('charging');
+  go('charging');
+  clearInterval(state.charging.timer);
+  setTimeout(()=>{ if(!state.charging) return;
+    $('#chgStatus').textContent = '充电中';
+    document.body.classList.add('charging');
+    state.charging.timer = setInterval(tickCharge, 1000);
+  }, 1800);
+  toast('已启动充电，实时数据更新中');
+}
+function currentPrice(){
+  const s = state.charging.station;
+  return s.price[1]; // 演示取高峰时段计费
+}
+function tickCharge(){
+  const c = state.charging; if(!c) return;
+  const p = currentPrice();
+  const power = 58 + Math.random()*10; // 模拟 SOC 高段降功率
+  c.min += 1/60;
+  const step = power/3600;
+  c.kwh += step;
+  c.soc = Math.min(100, c.soc + step/0.62*100/62);
+  const cost = c.kwh * (p.elec + p.fee) * 0.95; // 黄金会员 9.5 折
+  const deg = c.soc.toFixed(0);
+  $('#chgSoc').innerHTML = `${deg}<small style="font-size:15px">%</small>`;
+  $('#chgStatus').textContent = '充电中 · 预计剩余 ' + Math.max(1, Math.round((100-c.soc)/0.9)) + ' 分钟';
+  $('#chgKwh').textContent = c.kwh.toFixed(2);
+  $('#chgPower').textContent = (c.soc>85? power*0.4 : power).toFixed(1);
+  $('#chgMin').textContent = Math.round(c.min);
+  $('#chgCost').textContent = money(cost);
+  $('#chgPeriod').textContent = p.slot + ' ' + p.time + ' · 电费' + p.elec.toFixed(2) + '+服务费' + p.fee.toFixed(2);
+  $('#chgBalance').innerHTML = `余额 ${money(SERVER_CONFIG.wallet.balance)} ${SERVER_CONFIG.wallet.balance>=cost?'<span style="color:var(--green)">✓ 足够</span>':'<span style="color:var(--red)">余额不足，请充值</span>'}`;
+  $('#chgRing').style.background = `conic-gradient(#ffd76a ${c.soc}%, rgba(255,255,255,.16) 0)`;
+  if(c.soc >= 100) stopCharge(true);
+}
+function stopCharge(auto){
+  const c = state.charging; if(!c) return;
+  clearInterval(c.timer);
+  const p = currentPrice();
+  const cost = c.kwh * (p.elec + p.fee) * 0.95;
+  SERVER_CONFIG.wallet.balance -= cost;
+  state.charging = null;
+  document.body.classList.remove('charging');
+  showSheet(`
+    <h3>${auto?'充电已完成':'充电已结束'}</h3>
+    <div class="sub">订单结算：${c.station.name} · ${c.pile} 枪</div>
+    <div class="statrow" style="margin:0 0 14px">
+      <div><b>${c.kwh.toFixed(2)}</b><span>电量(度)</span></div>
+      <div><b>${Math.round(c.min)}</b><span>时长(分)</span></div>
+      <div><b style="color:var(--primary)">${money(cost)}</b><span>实付金额</span></div>
+    </div>
+    <div class="rule" style="margin:0 0 14px"><b>结算明细</b>电费 ${money(c.kwh*p.elec)} + 服务费 ${money(c.kwh*p.fee)}，会员9.5折后实付 ${money(cost)}，已从余额自动扣除。电子发票可在「我的-发票管理」开具。</div>
+    <button class="btn big" style="margin:0" onclick="hideSheet();renderOrders();go('orders')">查看订单</button>
+    <button class="btn big ghost" style="margin:10px 0 0" onclick="hideSheet()">完成</button>`);
+  refreshBalances();
+}
+function refreshBalances(){
+  const b = money(SERVER_CONFIG.wallet.balance);
+  $('#pfBalance').textContent = b; $('#walletAmount').textContent = '¥ ' + SERVER_CONFIG.wallet.balance.toFixed(2);
+}
+
+/* ================= 订单 ================= */
+function renderOrders(){
+  $('#orderList').innerHTML = `
+    <div class="station" onclick="toast('订单详情：含分时段电量电费明细')">
+      <div class="ico">⚡</div><div class="body"><h4><b>云宿充·滨江天悦广场站</b></h4>
+      <div class="meta">今天 12:32 · 直流快充 F-03 · 42.6度 · 58分钟</div>
+      <div class="nums"><b>进行中</b> · 预估 ¥76.85</div></div>
+      <div class="side"><div class="dist" style="color:var(--primary)">详情 ›</div></div></div>
+    <div class="station" onclick="toast('订单详情：含分时段电量电费明细')">
+      <div class="ico">⚡</div><div class="body"><h4><b>云宿充·星光大道购物中心站</b></h4>
+      <div class="meta">昨天 19:04 · 直流快充 F-11 · 28.3度 · 36分钟</div>
+      <div class="nums">已完成 · 实付 <b>¥48.66</b>（会员9.5折）</div></div>
+      <div class="side"><div class="dist" style="color:var(--primary)">详情 ›</div></div></div>
+    <div class="station" onclick="toast('故障订单已转后台工单，退费1-3个工作日到账')">
+      <div class="ico">🛠</div><div class="body"><h4><b>云宿充·闻涛社区驿站</b></h4>
+      <div class="meta">08-28 21:40 · 交流慢充 S-05 · 故障中止</div>
+      <div class="nums"><span class="tag red">已退费 ¥12.20</span></div></div>
+      <div class="side"><div class="dist" style="color:var(--primary)">详情 ›</div></div></div>`;
+}
+
+/* ================= 活动中心 ================= */
+function renderActivities(){
+  $('#actList').innerHTML = SERVER_CONFIG.activities.map(a=>`
+    <div class="card" style="overflow:hidden;cursor:pointer" onclick="openActivity('${a.id}')">
+      <div class="act-detail-img" style="margin:0;border-radius:0;background:${a.grad}">${a.emoji} ${a.title}</div>
+      <div style="padding:13px 15px"><b style="font-size:14px">${a.title}</b>
+      <div style="margin-top:5px;font-size:12px;color:#8b96a6">${a.sub}</div>
+      <div style="margin-top:9px"><span class="tag blue">可参与</span><span class="tag">后台活动管理下发</span></div></div>
+    </div>`).join('');
+}
+function openActivity(id){
+  const a = SERVER_CONFIG.activities.find(x=>x.id===id); if(!a) return;
+  showSheet(`
+    <h3>${a.emoji} ${a.title}</h3>
+    <div class="sub">${a.sub}</div>
+    <div class="rule"><b>活动规则</b>${a.rule.map(r=>'· '+r).join('<br>')}</div>
+    ${a.id==='a2'?'<button class="btn big" style="margin:0" onclick="hideSheet();go(\'wallet\')">去充值</button>':''}
+    ${a.id==='a1'?'<button class="btn big" style="margin:0" onclick="hideSheet();go(\'scan\')">立即扫码充电</button>':''}
+    ${a.id==='a3'?'<button class="btn big" style="margin:0" onclick="hideSheet();toast(\'邀请海报已生成，可分享给好友\')">立即邀请</button>':''}
+    ${['a4','a5'].includes(a.id)?'<button class="btn big" style="margin:0" onclick="hideSheet();go(\'stations\')">查看活动场站</button>':''}`);
+}
+
+/* ================= 充值 ================= */
+function renderWallet(){
+  refreshBalances();
+  const m = SERVER_CONFIG.tiers[SERVER_CONFIG.member.tierIndex].rights.disc;
+  $('#walletDisc').textContent = m==='无折扣'?'—':m.replace('充电 ','');
+  $('#pkgBox').innerHTML = SERVER_CONFIG.packages.map((p,i)=>`
+    <button class="${p.id===state.selPkg.id?'on':''}" onclick="selectPkg('${p.id}')">
+      ${p.badge?`<span class="badge">${p.badge}</span>`:''}
+      <div class="amt">${p.amount}<small> 元</small></div>
+      <div class="gift">+ 送 ${p.give} 元</div>
+      <div class="desc">${p.desc}</div>
+    </button>`).join('');
+}
+function selectPkg(id){ state.selPkg = SERVER_CONFIG.packages.find(p=>p.id===id); renderWallet(); }
+function payPkg(){
+  const p = state.selPkg;
+  showSheet(`
+    <h3>确认充值</h3>
+    <div class="sub">${p.amount} 元${p.give?`，赠送 ${p.give} 元`:''}，到账 ¥${p.amount+p.give}</div>
+    <div class="statrow" style="margin:0 0 14px">
+      <div><b>${money(p.amount)}</b><span>支付金额</span></div>
+      <div><b style="color:var(--orange)">+${p.give}</b><span>赠送金额</span></div>
+      <div><b style="color:var(--green)">${money(SERVER_CONFIG.wallet.balance+p.amount+p.give)}</b><span>充值后余额</span></div>
+    </div>
+    <button class="btn big" style="margin:0" onclick="doPay()">微信支付 ${money(p.amount)}</button>
+    <div style="text-align:center;font-size:11px;color:#98a2b3;margin-top:12px">支付即同意《充值服务协议》 · 赠送金额不可提现</div>`);
+}
+function doPay(){
+  const p = state.selPkg;
+  SERVER_CONFIG.wallet.balance += p.amount + p.give;
+  hideSheet(); refreshBalances();
+  showSheet(`
+    <div class="center-col" style="padding:18px 0 6px">
+      <div style="width:64px;height:64px;border-radius:50%;background:var(--green-soft);display:grid;place-items:center;font-size:30px">✅</div>
+      <h3 style="margin-top:12px">充值成功</h3>
+      <div class="sub">本次到账 ¥${p.amount+p.give}（含赠送 ¥${p.give}）</div>
+      <div class="statrow" style="width:100%;margin:6px 0 12px"><div style="grid-column:1/-1;border:0"><b style="color:var(--primary)">${money(SERVER_CONFIG.wallet.balance)}</b><span>当前余额</span></div></div>
+      <button class="btn big" style="margin:0" onclick="hideSheet();renderWallet()">完成</button>
+    </div>`);
+}
+
+/* ================= 会员 ================= */
+function renderMember(){
+  const cfg = SERVER_CONFIG.member, tiers = SERVER_CONFIG.tiers;
+  const cur = tiers[cfg.tierIndex], next = tiers[cfg.tierIndex+1];
+  $('#mcTier').textContent = cur.icon + ' ' + cur.name;
+  $('#mcGrow').textContent = cfg.grow;
+  $('#mcNext').textContent = next ? `距${next.name}还差 ${next.grow-cfg.grow}` : '已是最高等级';
+  const pct = next ? Math.min(100, Math.round((cfg.grow-cur.grow)/(next.grow-cur.grow)*100)) : 100;
+  $('#memberCard').insertAdjacentHTML('beforeend',
+    `<div style="margin-top:14px;height:6px;border-radius:3px;background:rgba(255,255,255,.2)"><i style="display:block;width:${pct}%;height:100%;border-radius:3px;background:linear-gradient(90deg,#f7d774,#ffe9ad)"></i></div>`);
+  $('#pfTier').textContent = cur.icon + ' ' + cur.name + ' · 成长值 ' + cfg.grow;
+  const R = cur.rights;
+  $('#rightsBox').innerHTML = `
+    <div><i>折扣</i><b>${R.disc.replace('充电 ','')}</b><span>充电折扣</span></div>
+    <div><i>🎟</i><b>${R.coupon.split('每月')[1]||R.coupon}</b><span>每月卡券</span></div>
+    <div><i>⭐</i><b>${R.day.replace('积分×','×')}</b><span>会员日积分</span></div>
+    <div><i>🅿️</i><b>2h</b><span>合作场站免停</span></div>`;
+  $('#tierBox').innerHTML = tiers.map((t,i)=>`
+    <div class="tier">
+      <div class="medal" style="background:${t.color}">${t.icon}</div>
+      <div class="body"><h5>${t.name}</h5><p>成长值 ≥ ${t.grow} · ${t.rights.disc} / ${t.rights.coupon}</p></div>
+      ${i===cfg.tierIndex?'<span class="cur">当前</span>':`<button class="btn ghost" style="height:30px;font-size:11px;padding:0 12px" onclick="toast('继续充电/充值可提升成长值')">升级</button>`}
+    </div>`).join('');
+}
+
+/* ================= 卡券 ================= */
+function renderCoupons(){
+  $('#couponList').innerHTML = SERVER_CONFIG.coupons.map(c=>`
+    <div class="station" style="align-items:center" onclick="toast('已选择「${c.name}」，下单时自动抵扣')">
+      <div style="flex:none;text-align:center;color:var(--red);min-width:64px">
+        <b style="font-size:22px">${c.amount}</b><span style="font-size:11px"> 元</span>
+      </div>
+      <div class="body"><h4><b>${c.name}</b></h4><div class="meta">${c.cond} · 有效期至 ${c.exp}</div></div>
+      <div class="side"><span class="tag red">${c.tag}</span></div>
+    </div>`).join('');
+}
+
+/* ================= 弹层 ================= */
+function showSheet(html){
+  $('#sheet').innerHTML = html + `<button class="close" onclick="hideSheet()">✕</button>`;
+  $('#mask').classList.add('show');
+}
+function hideSheet(){ $('#mask').classList.remove('show'); }
+$('#mask').addEventListener('click', e=>{ if(e.target.id==='mask') hideSheet(); });
+
+/* ================= 启动 ================= */
+buildTabbar(); buildJump(); renderHome(); renderFilters(); renderStations();
+renderOrders(); renderActivities(); renderWallet(); renderMember(); renderCoupons();
+document.querySelectorAll('.view').forEach(v=>{
+  v.addEventListener('transitionstart', ()=>{}, {once:true});
+});
+/* 进入扫码页时启动「识别」模拟 */
+new MutationObserver(()=>{
+  if($('#v-scan').classList.contains('active')) enterScan();
+  else clearTimeout(scanTimer);
+}).observe($('#v-scan'), {attributes:true, attributeFilter:['class']});
+</script>
+</body>
+</html>
